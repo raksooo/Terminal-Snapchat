@@ -1,3 +1,5 @@
+<h1>Terminal Snapchat</h1>
+
 To log in, add auth_token from other device to auth_token.txt
 On android the token can be found in /data/data/com.snapchat.android/shared_prefs/com.snapchat.android_preferences.xml. Or hardcode you password into snapchat.php.
 
