@@ -25,7 +25,7 @@ update();
 
 unset($argv[0]);
 $single = false;
-if ($argv[1] === "-s") {
+if (isset($argv[1]) && $argv[1] === "-s") {
 	$single = true;
 }
 $first = true;
