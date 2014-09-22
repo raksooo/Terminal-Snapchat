@@ -338,12 +338,12 @@ function sendSnap($file, $to, $duration) {
 		return;
 	}
 
-	output("Send " . substr($file, strrpos($file, "/")) . " to " . implode(", ", $to) . "? (Y/N): ");
+	output("Send " . substr($file, strrpos($file, "/")) . " to " . implode(", ", $to) . "? [Y/n]: ");
 	$handle = fopen ("php://stdin","r");
 	stream_set_blocking($handle, true);
 	$line = trim(fgets($handle));
 	fclose($handle);
-	if ($line !== "y" && $line !== "Y")
+	if ($line !== "y" && $line !== "Y" && $line !== "")
 		return;
 
 	$mediaType = $extension === "jpg" ? Snapchat::MEDIA_IMAGE : Snapchat::MEDIA_VIDEO;
