@@ -23,10 +23,22 @@ $snaps;
 $unread = 0;
 update();
 
-while (true) {
+unset($argv[0]);
+$single = false;
+if ($argv[1] === "-s") {
+	$single = true;
+}
+$first = true;
+while (!$single || $first) {
+	$first = false;
 	output("\r                                                                        ");
 	output("\r");
-	$input = prompt("\r" . formatPath() . " snapchat" . ($unread > 0 ? " (" . $unread . ")" : "") . ": ", UPDATE_FREQUENCY);
+	if (!$single) {
+		$input = prompt("\r" . formatPath() . " snapchat" . ($unread > 0 ? " (" . $unread . ")" : "") . ": ", UPDATE_FREQUENCY);
+	} else {
+		unset($argv[1]);
+		$input = join(" ", $argv);
+	}
 	if ($input === true)
 		output("\r");
 	else {
@@ -204,7 +216,7 @@ function printSnaps($type, $unreadonly = false) {
 }
 
 function openSnap($index) {
-	global $scriptpath, $TYPE_RECEIVED;
+	global $scriptpath, $TYPE_RECEIVED, $single;
 
 	$snap = getSnapByIndex($index, $TYPE_RECEIVED);
 	if ($snap->status === Snapchat::STATUS_DELIVERED || time() - $snap->opened/1000 < $snap->time) {
@@ -214,7 +226,9 @@ function openSnap($index) {
 			qlmanage($file, $snap->time);
 			markread($snap->id);
 			unlink($file);
-			update();
+			if (!$single) {
+				update();
+			}
 		} else {
 			output("Media not available");
 			output("\n");
@@ -254,7 +268,7 @@ function getSnapByIndex($index, $type) {
 }
 
 function update() {
-	global $snapchat, $snaps, $unread, $TYPE_RECEIVED;
+	global $snapchat, $snaps, $unread, $TYPE_RECEIVED, $single;
 
 
 	if (!isOnline())
@@ -280,8 +294,10 @@ function update() {
 	if ($unread != $count) {
 		if ($count > $unread) {
 			playSound("update");
-			output("\n\n");
-			printSnaps($TYPE_RECEIVED, true);
+			if ($single) {
+				output("\n\n");
+				printSnaps($TYPE_RECEIVED, true);
+			}
 		}
 		$unread = $count;
 		return true;
@@ -298,7 +314,7 @@ function playSound($action) {
 }
 
 function sendSnap($file, $to, $duration) {
-	global $scriptpath, $snapchat, $snaps;
+	global $scriptpath, $snapchat, $snaps, $single;
 
 	checkConnectivity();
 
@@ -357,7 +373,9 @@ function sendSnap($file, $to, $duration) {
 		return;
 	}
 
-	update();
+	if (!$single) {
+		update();
+	}
 }
 
 function printFriends() {
