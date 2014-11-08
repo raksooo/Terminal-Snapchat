@@ -1,10 +1,13 @@
 <?php require_once('php-snapchat/src/snapchat.php');
 date_default_timezone_set("Europe/Stockholm");
 
+const IMAGE_APPLICATION = "qlmanage";
+const VIDEO_APPLICATION = "open";
+const VIEWERAPPLICATION_STARTUP_TIME = 2;
+
 const UPDATE_FREQUENCY = 5;
 const PROMPT_SLEEP = 50;
 const RECONNECTION_SLEEP = 5;
-const QLMANAGE_STARTUP_TIME = 2;
 
 $scriptpath = realpath(dirname(__FILE__)) . "/";
 $path = getcwd();
@@ -223,7 +226,11 @@ function openSnap($index) {
 		$extension = $snap->media_type === Snapchat::MEDIA_IMAGE || $snap->media_type === Snapchat::MEDIA_FRIEND_REQUEST_IMAGE ? ".jpg" : ".mov";
 		$file = $scriptpath . "snaps/" . $snap->id . $extension;
 		if (file_exists($file)) {
-			qlmanage($file, $snap->time);
+            if ($extension === ".mov") {
+                openVideo($file, $snap->time);
+            } else {
+                openImage($file, $snap->time);
+            }
 			markread($snap->id);
 			unlink($file);
 			if (!$single) {
@@ -239,12 +246,28 @@ function openSnap($index) {
 	}
 }
 
-function qlmanage($file, $time = -1) {
-	$cmd = "(qlmanage -p ";
-	$cmd .= $file;
-	$cmd .= " & osascript -e 'tell application \"qlmanage\"' -e 'activate' -e 'end tell'";
-	if ($time >= 0)
-		$cmd .= " & sleep " . ($time + QLMANAGE_STARTUP_TIME) . " && killall qlmanage";
+function openImage($file, $time) {
+    $cmd = "(";
+    if (IMAGE_APPLICATION === "qlmanage") {
+        $cmd .= "qlmanage -p ";
+        $cmd .= $file;
+        $cmd .= " & osascript -e 'tell application \"qlmanage\"' -e 'activate' -e 'end tell'";
+    } else {
+        $cmd .= IMAGE_APPLICATION . " ";
+        $cmd .= $file;
+    }
+    $cmd .= " & sleep " . ($time + VIEWERAPPLICATION_STARTUP_TIME) . " && killall ";
+    $cmd .= IMAGE_APPLICATION;
+	$cmd .= ") 2> /dev/null";
+	exec($cmd);
+}
+
+function openVideo($file, $time) {
+    $cmd = "(";
+    $cmd .= VIDEO_APPLICATION . " ";
+    $cmd .= $file;
+    $cmd .= " & sleep " . ($time + VIEWERAPPLICATION_STARTUP_TIME) . " && killall ";
+    $cmd .= VIDEO_APPLICATION;
 	$cmd .= ") 2> /dev/null";
 	exec($cmd);
 }
