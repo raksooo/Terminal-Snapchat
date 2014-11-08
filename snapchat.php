@@ -18,7 +18,7 @@ $media = Array("image", "video", "video", "friend", "image", "video", "video");
 
 $snapchat;
 $username = "imalittlerascal";
-$password = null;
+$password = null; # Has to be null for auth token to be used
 $auth_token = trim(file_get_contents($scriptpath . "auth_token.txt"));
 checkConnectivity(true);
 $snapchat = new Snapchat($username, $password, $auth_token);
