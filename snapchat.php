@@ -4,7 +4,6 @@ date_default_timezone_set("Europe/Stockholm");
 const IMAGE_APPLICATION = "qlmanage";
 const VIDEO_APPLICATION = "open";
 const VIEWERAPPLICATION_STARTUP_TIME = 2;
-$username = "imalittlerascal";
 
 const UPDATE_FREQUENCY = 5;
 const PROMPT_SLEEP = 50;
@@ -20,8 +19,15 @@ $status = Array("none", "sent", "delivered", "opened", "saved");
 $media = Array("image", "video", "video", "friend", "image", "video", "video");
 
 $snapchat;
-$auth_token = "";
+$username = "";
 $password = "";
+$auth_token = "";
+if (file_exists($scriptpath . "username.txt")) {
+    $username = trim(file_get_contents($scriptpath . "username.txt"));
+} else {
+    $username = readline("Username: ");
+    file_put_contents($scriptpath . "username.txt", $username);
+}
 if (file_exists($scriptpath . "auth_token.txt")) {
     $auth_token = trim(file_get_contents($scriptpath . "auth_token.txt"));
 } else {
@@ -62,6 +68,8 @@ while (!$single || $first) {
 				break;
 			case "logout":
 				$snapchat->logout();
+                unlink($scriptpath . "username.txt");
+                unlink($scriptpath . "auth_token.txt");
 			case "e":
 			case "exit":
 				die();
