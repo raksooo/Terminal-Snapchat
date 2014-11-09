@@ -4,10 +4,13 @@ date_default_timezone_set("Europe/Stockholm");
 const IMAGE_APPLICATION = "qlmanage";
 const VIDEO_APPLICATION = "open";
 const VIEWERAPPLICATION_STARTUP_TIME = 2;
+$username = "imalittlerascal";
 
 const UPDATE_FREQUENCY = 5;
 const PROMPT_SLEEP = 50;
 const RECONNECTION_SLEEP = 5;
+
+/********************************************************/
 
 $scriptpath = realpath(dirname(__FILE__)) . "/";
 $path = getcwd();
@@ -17,11 +20,18 @@ $status = Array("none", "sent", "delivered", "opened", "saved");
 $media = Array("image", "video", "video", "friend", "image", "video", "video");
 
 $snapchat;
-$username = "imalittlerascal";
-$password = null; # Has to be null for auth token to be used
-$auth_token = trim(file_get_contents($scriptpath . "auth_token.txt"));
+$auth_token = "";
+$password = "";
+if (file_exists($scriptpath . "auth_token.txt")) {
+    $auth_token = trim(file_get_contents($scriptpath . "auth_token.txt"));
+} else {
+    $password = promptPassword();
+}
 checkConnectivity(true);
 $snapchat = new Snapchat($username, $password, $auth_token);
+if (!file_exists($scriptpath . "auth_token.txt")) {
+    file_put_contents($scriptpath . "auth_token.txt", $snapchat->auth_token);
+}
 $snaps;
 $unread = 0;
 update();
@@ -101,6 +111,14 @@ while (!$single || $first) {
 				break;
 		}
 	}
+}
+
+function promptPassword() {
+    echo "Password: ";
+    system('stty -echo');
+    $password = trim(fgets(STDIN));
+    system('stty echo');
+    return $password;
 }
 
 function prompt($message, $timeout = -1) {
@@ -291,7 +309,7 @@ function getSnapByIndex($index, $type) {
 }
 
 function update() {
-	global $snapchat, $snaps, $unread, $TYPE_RECEIVED, $single;
+	global $snapchat, $snaps, $unread, $TYPE_RECEIVED, $single, $scriptpath;
 
 
 	if (!isOnline())
@@ -304,8 +322,10 @@ function update() {
 		$snaps = getSnaps();
 	} while (!is_array($snaps) && $i++ < 5);
 
-	if (!is_array($snaps) && isOnline())
-		die("\nYou were logged out :O");
+    if (!is_array($snaps) && isOnline()) {
+        unlink($scriptpath . "auth_token.txt");
+        die("\nYou were logged out :O");
+    }
 	else if (!isOnline())
 		return null;
 
