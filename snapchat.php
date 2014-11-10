@@ -26,15 +26,23 @@ if (file_exists($scriptpath . "username.txt")) {
     $username = trim(file_get_contents($scriptpath . "username.txt"));
 } else {
     $username = readline("Username: ");
-    file_put_contents($scriptpath . "username.txt", $username);
 }
 if (file_exists($scriptpath . "auth_token.txt")) {
     $auth_token = trim(file_get_contents($scriptpath . "auth_token.txt"));
 } else {
     $password = promptPassword();
 }
+
 checkConnectivity(true);
 $snapchat = new Snapchat($username, $password, $auth_token);
+
+if ($snapchat->username == null) {
+    die("\nWrong username/password or invalid auth_token\n");
+}
+
+if (!file_exists($scriptpath . "username.txt")) {
+    file_put_contents($scriptpath . "username.txt", $username);
+}
 if (!file_exists($scriptpath . "auth_token.txt")) {
     file_put_contents($scriptpath . "auth_token.txt", $snapchat->auth_token);
 }
