@@ -1,8 +1,11 @@
 <?php require_once('php-snapchat/src/snapchat.php');
 date_default_timezone_set("Europe/Stockholm");
 
-const IMAGE_APPLICATION = "qlmanage -p";
+const IMAGE_APPLICATION = "qlmanage";
 const VIDEO_APPLICATION = "open";
+
+const IMAGE_APPLICATION_FLAGS = " -p";
+const VIDEO_APPLICATION_FLAGS = "";
 const VIEWERAPPLICATION_STARTUP_TIME = 2;
 
 const UPDATE_FREQUENCY = 5;
@@ -22,112 +25,12 @@ $snapchat;
 $username = "";
 $password = "";
 $auth_token = "";
-if (file_exists($scriptpath . "username.txt")) {
-    $username = trim(file_get_contents($scriptpath . "username.txt"));
-} else {
-    $username = readline("Username: ");
-}
-if (file_exists($scriptpath . "auth_token.txt")) {
-    $auth_token = trim(file_get_contents($scriptpath . "auth_token.txt"));
-} else {
-    $password = promptPassword();
-}
-
-checkConnectivity(true);
-$snapchat = new Snapchat($username, $password, $auth_token);
-if ($snapchat->username == null) {
-    die("\nWrong username/password or invalid auth_token\n");
-}
-
-if (!file_exists($scriptpath . "username.txt")) {
-    file_put_contents($scriptpath . "username.txt", $username);
-}
-if (!file_exists($scriptpath . "auth_token.txt")) {
-    file_put_contents($scriptpath . "auth_token.txt", $snapchat->auth_token);
-}
-
 $snaps;
 $unread = 0;
-update();
 
-unset($argv[0]);
-$single = false;
-if (isset($argv[1]) && $argv[1] === "-s") {
-	$single = true;
-}
-$first = true;
-while (!$single || $first) {
-	$first = false;
-	output("\r                                                                        ");
-	output("\r");
-	if (!$single) {
-		$input = prompt("\r" . formatPath() . " snapchat" . ($unread > 0 ? " (" . $unread . ")" : "") . ": ", UPDATE_FREQUENCY);
-	} else {
-		unset($argv[1]);
-		$input = join(" ", $argv);
-	}
-	if ($input === true)
-		output("\r");
-	else {
-		switch ($input) {
-			case "h":
-			case "help":
-				echo file_get_contents($scriptpath . "help.txt");
-				break;
-			case "logout":
-				$snapchat->logout();
-                unlink($scriptpath . "username.txt");
-                unlink($scriptpath . "auth_token.txt");
-			case "e":
-			case "exit":
-				die();
-				break;
-			case "raw":
-				print_r($snaps);
-				break;
-			case "s":
-			case "sent":
-				printSnaps($TYPE_SENT);
-				break;
-			case "r":
-			case "received":
-				printSnaps($TYPE_RECEIVED);
-				break;
-			case "a":
-			case "all":
-				printSnaps($TYPE_ALL);
-				break;
-			case "f":
-			case "friends":
-				printFriends();
-				break;
-			case "u":
-			case "update":
-				update();
-				break;
-			case "ls":
-				printFiles();
-				break;
-			case "c":
-			case "clr":
-			case "clear":
-				for ($i=0; $i<1000; $i++)
-					output("\n");
-				break;
-			default:
-				$input_arr = explode(" ", $input);
-				if (strpos($input, "v ") === 0 || strpos($input, "view ") === 0 || $input === "v")
-					openSnap(isset($input_arr[1]) ? $input_arr[1] : 0);
-				else if (strpos($input, "p ") === 0 || strpos($input, "send ") === 0)
-					sendSnap($input_arr[1], $input_arr[2], empty($input_arr[3]) ? 10 : $input_arr[3]);
-				else if (strpos($input, "cd ") === 0 && isset($input_arr[1]))
-					changeDirectory($input_arr[1]);
-				else if (strpos($input, "read ") === 0 && isset($input_arr[1]))
-					markread(getSnapByIndex(isset($input_arr[2]) ? $input_arr[2] : 0, $input_arr[1] === "s" ? $TYPE_SENT : $TYPE_RECEIVED)->id, true);
-				break;
-		}
-	}
-}
+login();
+update();
+run();
 
 function promptPassword() {
     echo "Password: ";
@@ -163,6 +66,117 @@ function prompt($message, $timeout = -1) {
 	pclose($fp);
 
 	return trim($line);
+}
+
+function login() {
+    global $scriptpath, $username, $auth_token, $password, $snapchat;
+
+    if (file_exists($scriptpath . "username.txt")) {
+        $username = trim(file_get_contents($scriptpath . "username.txt"));
+    } else {
+        $username = readline("Username: ");
+    }
+    if (file_exists($scriptpath . "auth_token.txt")) {
+        $auth_token = trim(file_get_contents($scriptpath . "auth_token.txt"));
+    } else {
+        $password = promptPassword();
+    }
+
+    checkConnectivity(true);
+    $snapchat = new Snapchat($username, $password, $auth_token);
+    if ($snapchat->username == null) {
+        die("\nWrong username/password or invalid auth_token\n");
+    }
+
+    if (!file_exists($scriptpath . "username.txt")) {
+        file_put_contents($scriptpath . "username.txt", $username);
+    }
+    if (!file_exists($scriptpath . "auth_token.txt")) {
+        file_put_contents($scriptpath . "auth_token.txt", $snapchat->auth_token);
+    }
+}
+
+function run() {
+    global $argv, $unread, $scriptpath, $snapchat, $snaps, $TYPE_SENT, $TYPE_RECEIVED, $TYPE_ALL;
+
+    unset($argv[0]);
+    $single = false;
+    if (isset($argv[1]) && $argv[1] === "-s") {
+        $single = true;
+    }
+    $first = true;
+    while (!$single || $first) {
+        $first = false;
+        output("\r                                                                        ");
+        output("\r");
+        if (!$single) {
+            $input = prompt("\r" . formatPath() . " snapchat" . ($unread > 0 ? " (" . $unread . ")" : "") . ": ", UPDATE_FREQUENCY);
+        } else {
+            unset($argv[1]);
+            $input = join(" ", $argv);
+        }
+        if ($input === true)
+            output("\r");
+        else {
+            switch ($input) {
+                case "h":
+                case "help":
+                    echo file_get_contents($scriptpath . "help.txt");
+                    break;
+                case "logout":
+                    $snapchat->logout();
+                    unlink($scriptpath . "username.txt");
+                    unlink($scriptpath . "auth_token.txt");
+                case "e":
+                case "exit":
+                    die();
+                    break;
+                case "raw":
+                    print_r($snaps);
+                    break;
+                case "s":
+                case "sent":
+                    printSnaps($TYPE_SENT);
+                    break;
+                case "r":
+                case "received":
+                    printSnaps($TYPE_RECEIVED);
+                    break;
+                case "a":
+                case "all":
+                    printSnaps($TYPE_ALL);
+                    break;
+                case "f":
+                case "friends":
+                    printFriends();
+                    break;
+                case "u":
+                case "update":
+                    update();
+                    break;
+                case "ls":
+                    printFiles();
+                    break;
+                case "c":
+                case "clr":
+                case "clear":
+                    for ($i=0; $i<1000; $i++)
+                        output("\n");
+                    break;
+                default:
+                    $input_arr = explode(" ", $input);
+                    if (strpos($input, "v ") === 0 || strpos($input, "view ") === 0 || $input === "v")
+                        openSnap(isset($input_arr[1]) ? $input_arr[1] : 0);
+                    else if (strpos($input, "p ") === 0 || strpos($input, "send ") === 0)
+                        sendSnap($input_arr[1], $input_arr[2], empty($input_arr[3]) ? 10 : $input_arr[3]);
+                    else if (strpos($input, "cd ") === 0 && isset($input_arr[1]))
+                        changeDirectory($input_arr[1]);
+                    else if (strpos($input, "read ") === 0 && isset($input_arr[1]))
+                        markread(getSnapByIndex(isset($input_arr[2]) ? $input_arr[2] : 0, $input_arr[1] === "s" ? $TYPE_SENT : $TYPE_RECEIVED)->id, true);
+                    break;
+            }
+        }
+    }
 }
 
 function longestlength($array) {
@@ -277,8 +291,10 @@ function openSnap($index) {
 }
 
 function openMedia($file, $time, $application) {
+    $flags = $application === IMAGE_APPLICATION ? IMAGE_APPLICATION_FLAGS : VIDEO_APPLICATION_FLAGS;
+
     $cmd = "(";
-    $cmd .= $application . " ";
+    $cmd .= $application . $flags . " ";
     $cmd .= $file;
     if (PHP_OS === "Darwin") {
         $cmd .= " & osascript -e 'tell application \"" . $application . "\"' -e 'activate' -e 'end tell'";
