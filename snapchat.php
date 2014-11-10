@@ -1,7 +1,7 @@
 <?php require_once('php-snapchat/src/snapchat.php');
 date_default_timezone_set("Europe/Stockholm");
 
-const IMAGE_APPLICATION = "qlmanage";
+const IMAGE_APPLICATION = "qlmanage -p";
 const VIDEO_APPLICATION = "open";
 const VIEWERAPPLICATION_STARTUP_TIME = 2;
 
@@ -35,7 +35,6 @@ if (file_exists($scriptpath . "auth_token.txt")) {
 
 checkConnectivity(true);
 $snapchat = new Snapchat($username, $password, $auth_token);
-
 if ($snapchat->username == null) {
     die("\nWrong username/password or invalid auth_token\n");
 }
@@ -46,6 +45,7 @@ if (!file_exists($scriptpath . "username.txt")) {
 if (!file_exists($scriptpath . "auth_token.txt")) {
     file_put_contents($scriptpath . "auth_token.txt", $snapchat->auth_token);
 }
+
 $snaps;
 $unread = 0;
 update();
@@ -260,11 +260,7 @@ function openSnap($index) {
 		$extension = $snap->media_type === Snapchat::MEDIA_IMAGE || $snap->media_type === Snapchat::MEDIA_FRIEND_REQUEST_IMAGE ? ".jpg" : ".mov";
 		$file = $scriptpath . "snaps/" . $snap->id . $extension;
 		if (file_exists($file)) {
-            if ($extension === ".mov") {
-                openVideo($file, $snap->time);
-            } else {
-                openImage($file, $snap->time);
-            }
+            openMedia($file, $snap->time, $extension === ".mov" ? VIDEO_APPLICATION : IMAGE_APPLICATION);
 			markread($snap->id);
 			unlink($file);
 			if (!$single) {
@@ -280,28 +276,15 @@ function openSnap($index) {
 	}
 }
 
-function openImage($file, $time) {
+function openMedia($file, $time, $application) {
     $cmd = "(";
-    if (IMAGE_APPLICATION === "qlmanage") {
-        $cmd .= "qlmanage -p ";
-        $cmd .= $file;
-        $cmd .= " & osascript -e 'tell application \"qlmanage\"' -e 'activate' -e 'end tell'";
-    } else {
-        $cmd .= IMAGE_APPLICATION . " ";
-        $cmd .= $file;
+    $cmd .= $application . " ";
+    $cmd .= $file;
+    if (PHP_OS === "Darwin") {
+        $cmd .= " & osascript -e 'tell application \"" . $application . "\"' -e 'activate' -e 'end tell'";
     }
     $cmd .= " & sleep " . ($time + VIEWERAPPLICATION_STARTUP_TIME) . " && killall ";
-    $cmd .= IMAGE_APPLICATION;
-	$cmd .= ") 2> /dev/null";
-	exec($cmd);
-}
-
-function openVideo($file, $time) {
-    $cmd = "(";
-    $cmd .= VIDEO_APPLICATION . " ";
-    $cmd .= $file;
-    $cmd .= " & sleep " . ($time + VIEWERAPPLICATION_STARTUP_TIME) . " && killall ";
-    $cmd .= VIDEO_APPLICATION;
+    $cmd .= $application;
 	$cmd .= ") 2> /dev/null";
 	exec($cmd);
 }
@@ -340,7 +323,7 @@ function update() {
 
     if (!is_array($snaps) && isOnline()) {
         unlink($scriptpath . "auth_token.txt");
-        die("\nYou were logged out :O");
+        die("\nYou were logged out :O\n");
     }
 	else if (!isOnline())
 		return null;
